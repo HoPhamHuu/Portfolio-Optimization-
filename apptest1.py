@@ -18,13 +18,98 @@ def random_color():
     return "#%06x" % random.randint(0, 0xFFFFFF)
 
 
-# Cấu hình giao diện trang web
-st.set_page_config(page_title="Portfolio Optimization Dashboard 📈", layout="wide")
-st.title("Portfolio Optimization Dashboard")
-st.write("Ứng dụng tích hợp quy trình: tải dữ liệu cổ phiếu, xử lý, tối ưu hóa danh mục đầu tư (SLSQP, SGD, SGD - Sharpe), so sánh với VN-Index và trực quan hóa dữ liệu.")
+# Cấu hình trang với sidebar mở rộng
+st.set_page_config(
+    page_title="Portfolio Optimization Dashboard 📈", 
+    layout="wide", 
+    initial_sidebar_state="expanded"
+)
 
-# Tạo các tab ngang cho các trang
-tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
+# Thêm CSS tùy chỉnh với Google Font (Poppins), background gradient, hiệu ứng hiện đại cho các thành phần
+st.markdown(
+    """
+    <style>
+    /* Import Google Font */
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+    
+    /* Tổng thể background với gradient mềm mại */
+    body {
+        background: linear-gradient(135deg, #f6f9fc, #e9eff5);
+        font-family: 'Poppins', sans-serif;
+    }
+    
+    /* Header chính */
+    .main-header {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #333333;
+        text-align: center;
+        padding: 1.5rem 0;
+        text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        position: relative;
+    }
+    
+    /* Sub-header */
+    .sub-header {
+        font-size: 1.25rem;
+        color: #555555;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    /* Style cho các tab */
+    .stTabs [data-baseweb="tab"] {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #333333;
+        border-radius: 8px;
+        transition: transform 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+        padding: 0.5rem 1rem;
+    }
+    /* Hover cho tab: scale nhẹ, nền chuyển sang màu pastel đỏ nhạt và chữ chuyển thành màu đỏ đậm */
+    .stTabs [data-baseweb="tab"]:hover {
+        transform: scale(1.05);
+        background-color: #ffebee;
+        color: #d32f2f;
+    }
+    /* Tab đang active */
+    .stTabs [data-baseweb="tab"] > div[role="button"][aria-selected="true"] {
+        background-color: #d32f2f !important;
+        color: #ffffff !important;
+        border-radius: 8px;
+    }
+    
+    /* Cải tiến cho sidebar (nếu có) */
+    .css-1d391kg {  
+        background-color: #ffffff;
+        border-right: 1px solid #e0e0e0;
+    }
+    
+    /* Thêm padding cho container chính */
+    .block-container {
+        padding-top: 2rem;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Header chính (đã bỏ dòng chèn sticker)
+st.markdown(
+    """
+    <div class="main-header">
+        Portfolio Optimization Dashboard
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+st.markdown(
+    '<div class="sub-header">Ứng dụng tích hợp quy trình: tải dữ liệu cổ phiếu, xử lý, tối ưu hóa danh mục đầu tư (SLSQP, SGD, SGD - Sharpe), so sánh với VN-Index và trực quan hóa dữ liệu.</div>',
+    unsafe_allow_html=True
+)
+
+# Tạo các tab ngang cho các trang với tên được tùy chỉnh
+tab_names = [
     "Tải dữ liệu cổ phiếu",
     "Tối ưu danh mục (SLSQP)",
     "Tối ưu danh mục (SGD)",
@@ -33,7 +118,9 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
     "Thông tin công ty",
     "Báo cáo tài chính",
     "Phân tích kỹ thuật"
-])
+]
+tabs = st.tabs(tab_names)
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = tabs
 
 ###########################################
 # Tab 1: Tải dữ liệu cổ phiếu
@@ -144,7 +231,7 @@ with tab2:
         row=1, col=1
     )
 
-    # Vẽ biểu đồ cột với dữ liệu đã lọc (nếu cần)
+    # Vẽ biểu đồ cột với dữ liệu đã lọc và ẩn legend
     fig_slsqp.add_trace(
         go.Bar(
             x=portfolio_data_filtered['Cổ phiếu'],
@@ -153,6 +240,7 @@ with tab2:
                 color=[random_color() for _ in range(len(portfolio_data_filtered))],
                 line=dict(color='#000000', width=2)
             ),
+            showlegend=False  # Ẩn legend của biểu đồ cột
         ),
         row=1, col=2
     )
@@ -166,19 +254,37 @@ with tab2:
         plot_bgcolor='rgba(0,0,0,0)',
         showlegend=True
     )
+
     st.plotly_chart(fig_slsqp, use_container_width=True)
     
-    # Tính lợi nhuận tích lũy của danh mục
+    # Tính lợi nhuận tích lũy của danh mục (SLSQP)
     processed_data['weighted_return_slsqp'] = processed_data['daily_return'] * processed_data['symbol'].map(
         dict(zip(expected_returns.index, optimal_weights_slsqp))
     )
     portfolio_daily_return_slsqp = processed_data.groupby('time')['weighted_return_slsqp'].sum().reset_index()
     portfolio_daily_return_slsqp.rename(columns={'weighted_return_slsqp': 'daily_return'}, inplace=True)
-    portfolio_daily_return_slsqp['cumulative_portfolio_return'] = (1 + portfolio_daily_return_slsqp['daily_return']).cumprod()
-    
-    st.subheader("Lợi nhuận tích lũy của danh mục (SLSQP)")
-    st.line_chart(portfolio_daily_return_slsqp.set_index('time')['cumulative_portfolio_return'])
-    
+    # Tính lợi nhuận tích lũy và chuyển sang % (ví dụ: 125% thay vì 1.25)
+    portfolio_daily_return_slsqp['cumulative_portfolio_return'] = (1 + portfolio_daily_return_slsqp['daily_return']).cumprod() * 100
+
+    # Sử dụng Plotly để hiển thị biểu đồ với ký hiệu %
+    fig_portfolio = go.Figure()
+    fig_portfolio.add_trace(go.Scatter(
+        x=portfolio_daily_return_slsqp['time'],
+        y=portfolio_daily_return_slsqp['cumulative_portfolio_return'],
+        mode='lines',
+        name='Lợi nhuận tích lũy',
+        hovertemplate='Ngày: %{x}<br>Lợi nhuận tích lũy: %{y:.2f}%<extra></extra>'
+    ))
+    fig_portfolio.update_layout(
+        title="Lợi nhuận tích lũy của danh mục (SLSQP)",
+        xaxis_title="Thời gian",
+        yaxis_title="Lợi nhuận tích lũy (%)",
+        template="plotly_white"
+    )
+    # Thêm ký hiệu % vào nhãn của trục Y
+    fig_portfolio.update_yaxes(ticksuffix="%")
+    st.plotly_chart(fig_portfolio, use_container_width=True)
+
     # So sánh với VN-Index
     with st.expander("So sánh với VN-Index"):
         try:
@@ -198,7 +304,8 @@ with tab2:
                 st.stop()
         
         vnindex_data['market_return'] = vnindex_data['close'].pct_change()
-        vnindex_data['cumulative_daily_return'] = (1 + vnindex_data['market_return']).cumprod()
+        # Tính lợi nhuận tích lũy của VN-Index và chuyển sang %
+        vnindex_data['cumulative_daily_return'] = (1 + vnindex_data['market_return']).cumprod() * 100
         
         comparison_slsqp = pd.merge(
             portfolio_daily_return_slsqp,
@@ -206,40 +313,45 @@ with tab2:
             on='time',
             how='inner'
         )
+        # Đổi tên cột để thể hiện đơn vị %
         comparison_slsqp.rename(columns={
-            'cumulative_portfolio_return': 'Lợi nhuận danh mục (SLSQP)',
-            'cumulative_daily_return': 'Lợi nhuận VN-Index'
+            'cumulative_portfolio_return': 'Lợi nhuận danh mục (SLSQP) (%)',
+            'cumulative_daily_return': 'Lợi nhuận VN-Index (%)'
         }, inplace=True)
         
         st.subheader("Bảng so sánh lợi nhuận (10 dòng cuối)")
-        st.dataframe(comparison_slsqp[['time', 'Lợi nhuận danh mục (SLSQP)', 'Lợi nhuận VN-Index']].tail(10))
+        st.dataframe(comparison_slsqp[['time', 'Lợi nhuận danh mục (SLSQP) (%)', 'Lợi nhuận VN-Index (%)']].tail(10))
         
         fig_comp_slsqp = go.Figure()
         fig_comp_slsqp.add_trace(go.Scatter(
             x=comparison_slsqp['time'],
-            y=comparison_slsqp['Lợi nhuận danh mục (SLSQP)'],
+            y=comparison_slsqp['Lợi nhuận danh mục (SLSQP) (%)'],
             mode='lines',
             name='Lợi nhuận danh mục (SLSQP)',
             line=dict(color='blue', width=2),
-            hovertemplate='Ngày: %{x}<br>Lợi nhuận danh mục (SLSQP): %{y:.2%}<extra></extra>'
+            hovertemplate='Ngày: %{x}<br>Lợi nhuận danh mục (SLSQP): %{y:.2f}%<extra></extra>'
         ))
         fig_comp_slsqp.add_trace(go.Scatter(
             x=comparison_slsqp['time'],
-            y=comparison_slsqp['Lợi nhuận VN-Index'],
+            y=comparison_slsqp['Lợi nhuận VN-Index (%)'],
             mode='lines',
             name='Lợi nhuận VN-Index',
             line=dict(color='red', width=2),
-            hovertemplate='Ngày: %{x}<br>Lợi nhuận VN-Index: %{y:.2%}<extra></extra>'
+            hovertemplate='Ngày: %{x}<br>Lợi nhuận VN-Index: %{y:.2f}%<extra></extra>'
         ))
         fig_comp_slsqp.update_layout(
             title="So sánh lợi nhuận danh mục (SLSQP) vs VN-Index",
             xaxis_title="Thời gian",
-            yaxis_title="Lợi nhuận tích lũy",
+            yaxis_title="Lợi nhuận tích lũy (%)",
             template="plotly_white"
         )
+        # Thêm ký hiệu % vào nhãn của trục Y
+        fig_comp_slsqp.update_yaxes(ticksuffix="%")
         st.plotly_chart(fig_comp_slsqp, use_container_width=True)
+        
         comparison_slsqp.to_csv("portfolio_vs_vnindex_comparison_slsqp.csv", index=False)
         st.write("Dữ liệu so sánh đã được lưu vào 'portfolio_vs_vnindex_comparison_slsqp.csv'.")
+
 
 ###########################################
 # Tab 3: Tối ưu danh mục (SGD)
@@ -315,7 +427,7 @@ with tab3:
         row=1, col=1
     )
 
-    # Vẽ biểu đồ cột với dữ liệu đã lọc
+    # Vẽ biểu đồ cột với dữ liệu đã lọc và ẩn legend
     fig_sgd.add_trace(
         go.Bar(
             x=portfolio_data_filtered['Cổ phiếu'],
@@ -324,6 +436,7 @@ with tab3:
                 color=[random_color() for _ in range(len(portfolio_data_filtered))],
                 line=dict(color='#000000', width=2)
             ),
+            showlegend=False  # Ẩn legend của biểu đồ cột
         ),
         row=1, col=2
     )
@@ -338,18 +451,35 @@ with tab3:
         showlegend=True
     )
     st.plotly_chart(fig_sgd, use_container_width=True)
-
-    # Tính lợi nhuận tích lũy của danh mục
+    # Tính lợi nhuận tích lũy của danh mục (SGD)
     processed_data['weighted_return_sgd'] = processed_data['daily_return'] * processed_data['symbol'].map(
         dict(zip(expected_returns.index, optimal_weights_sgd))
     )
     portfolio_daily_return_sgd = processed_data.groupby('time')['weighted_return_sgd'].sum().reset_index()
     portfolio_daily_return_sgd.rename(columns={'weighted_return_sgd': 'daily_return'}, inplace=True)
-    portfolio_daily_return_sgd['cumulative_portfolio_return'] = (1 + portfolio_daily_return_sgd['daily_return']).cumprod()
-    
+    # Tính lợi nhuận tích lũy và chuyển sang % (ví dụ: 125% thay vì 1.25)
+    portfolio_daily_return_sgd['cumulative_portfolio_return'] = (1 + portfolio_daily_return_sgd['daily_return']).cumprod() * 100
+
     st.subheader("Lợi nhuận tích lũy của danh mục (SGD)")
-    st.line_chart(portfolio_daily_return_sgd.set_index('time')['cumulative_portfolio_return'])
-    
+    # Sử dụng Plotly để hiển thị biểu đồ với ký hiệu %
+    fig_portfolio_sgd = go.Figure()
+    fig_portfolio_sgd.add_trace(go.Scatter(
+        x=portfolio_daily_return_sgd['time'],
+        y=portfolio_daily_return_sgd['cumulative_portfolio_return'],
+        mode='lines',
+        name='Lợi nhuận tích lũy',
+        hovertemplate='Ngày: %{x}<br>Lợi nhuận tích lũy: %{y:.2f}%<extra></extra>'
+    ))
+    fig_portfolio_sgd.update_layout(
+        title="Lợi nhuận tích lũy của danh mục (SGD)",
+        xaxis_title="Thời gian",
+        yaxis_title="Lợi nhuận tích lũy (%)",
+        template="plotly_white"
+    )
+    # Thêm ký hiệu % vào nhãn của trục Y
+    fig_portfolio_sgd.update_yaxes(ticksuffix="%")
+    st.plotly_chart(fig_portfolio_sgd, use_container_width=True)
+
     # So sánh với VN-Index
     with st.expander("So sánh với VN-Index"):
         try:
@@ -369,7 +499,8 @@ with tab3:
                 st.stop()
         
         vnindex_data['market_return'] = vnindex_data['close'].pct_change()
-        vnindex_data['cumulative_daily_return'] = (1 + vnindex_data['market_return']).cumprod()
+        # Tính lợi nhuận tích lũy của VN-Index và chuyển sang %
+        vnindex_data['cumulative_daily_return'] = (1 + vnindex_data['market_return']).cumprod() * 100
         
         comparison_sgd = pd.merge(
             portfolio_daily_return_sgd,
@@ -377,46 +508,49 @@ with tab3:
             on='time',
             how='inner'
         )
+        # Đổi tên cột để thể hiện đơn vị %
         comparison_sgd.rename(columns={
-            'cumulative_portfolio_return': 'Lợi nhuận danh mục (SGD)',
-            'cumulative_daily_return': 'Lợi nhuận VN-Index'
+            'cumulative_portfolio_return': 'Lợi nhuận danh mục (SGD) (%)',
+            'cumulative_daily_return': 'Lợi nhuận VN-Index (%)'
         }, inplace=True)
         
         st.subheader("Bảng so sánh lợi nhuận (10 dòng cuối)")
-        st.dataframe(comparison_sgd[['time', 'Lợi nhuận danh mục (SGD)', 'Lợi nhuận VN-Index']].tail(10))
+        st.dataframe(comparison_sgd[['time', 'Lợi nhuận danh mục (SGD) (%)', 'Lợi nhuận VN-Index (%)']].tail(10))
         
         fig_comp_sgd = go.Figure()
         fig_comp_sgd.add_trace(go.Scatter(
             x=comparison_sgd['time'],
-            y=comparison_sgd['Lợi nhuận danh mục (SGD)'],
+            y=comparison_sgd['Lợi nhuận danh mục (SGD) (%)'],
             mode='lines',
             name='Lợi nhuận danh mục (SGD)',
             line=dict(color='green', width=2),
-            hovertemplate='Ngày: %{x}<br>Lợi nhuận danh mục (SGD): %{y:.2%}<extra></extra>'
+            hovertemplate='Ngày: %{x}<br>Lợi nhuận danh mục (SGD): %{y:.2f}%<extra></extra>'
         ))
         fig_comp_sgd.add_trace(go.Scatter(
             x=comparison_sgd['time'],
-            y=comparison_sgd['Lợi nhuận VN-Index'],
+            y=comparison_sgd['Lợi nhuận VN-Index (%)'],
             mode='lines',
             name='Lợi nhuận VN-Index',
             line=dict(color='red', width=2),
-            hovertemplate='Ngày: %{x}<br>Lợi nhuận VN-Index: %{y:.2%}<extra></extra>'
+            hovertemplate='Ngày: %{x}<br>Lợi nhuận VN-Index: %{y:.2f}%<extra></extra>'
         ))
         fig_comp_sgd.update_layout(
             title="So sánh lợi nhuận danh mục (SGD) vs VN-Index",
             xaxis_title="Thời gian",
-            yaxis_title="Lợi nhuận tích lũy",
+            yaxis_title="Lợi nhuận tích lũy (%)",
             template="plotly_white",
             hovermode="x unified"
         )
+        # Thêm ký hiệu % vào nhãn của trục Y
+        fig_comp_sgd.update_yaxes(ticksuffix="%")
         st.plotly_chart(fig_comp_sgd, use_container_width=True)
         comparison_sgd.to_csv("portfolio_vs_vnindex_comparison_sgd.csv", index=False)
         st.write("Dữ liệu so sánh đã được lưu vào 'portfolio_vs_vnindex_comparison_sgd.csv'.")
 
+
 ###########################################
 # Tab 4: Tối ưu danh mục (SGD - Sharpe)
 ###########################################
-# Tab 4: Tối ưu danh mục (SGD - Sharpe)
 with tab4:
     st.header("Tối ưu danh mục (SGD - Sharpe)")
     try:
@@ -507,7 +641,7 @@ with tab4:
         row=1, col=1
     )
 
-    # Vẽ biểu đồ cột với dữ liệu đã lọc
+    # Vẽ biểu đồ cột với dữ liệu đã lọc và ẩn legend
     fig_sharpe.add_trace(
         go.Bar(
             x=portfolio_data_filtered['Cổ phiếu'],
@@ -516,6 +650,7 @@ with tab4:
                 color=[f'#{random.randint(0, 0xFFFFFF):06x}' for _ in range(len(portfolio_data_filtered))],
                 line=dict(color='#000000', width=2)
             ),
+            showlegend=False  # Ẩn legend của biểu đồ cột
         ),
         row=1, col=2
     )
@@ -529,16 +664,35 @@ with tab4:
         plot_bgcolor='rgba(0,0,0,0)',
         showlegend=True
     )
+
     st.plotly_chart(fig_sharpe, use_container_width=True)
 
-    # Tính lợi nhuận tích lũy của danh mục
+    # Tính lợi nhuận tích lũy của danh mục (SGD - Sharpe)
     processed_data['weighted_return_sharpe'] = processed_data['daily_return'] * processed_data['symbol'].map(optimal_weights_sgd_sharpe)
     portfolio_daily_return_sharpe = processed_data.groupby('time')['weighted_return_sharpe'].sum().reset_index()
     portfolio_daily_return_sharpe.rename(columns={'weighted_return_sharpe': 'daily_return'}, inplace=True)
-    portfolio_daily_return_sharpe['cumulative_portfolio_return'] = (1 + portfolio_daily_return_sharpe['daily_return']).cumprod()
+    # Tính lợi nhuận tích lũy và chuyển sang % (ví dụ: 125% thay vì 1.25)
+    portfolio_daily_return_sharpe['cumulative_portfolio_return'] = (1 + portfolio_daily_return_sharpe['daily_return']).cumprod() * 100
 
     st.subheader("Lợi nhuận tích lũy của danh mục (SGD - Sharpe)")
-    st.line_chart(portfolio_daily_return_sharpe.set_index('time')['cumulative_portfolio_return'])
+    # Sử dụng Plotly để hiển thị biểu đồ với ký hiệu %
+    fig_portfolio_sharpe = go.Figure()
+    fig_portfolio_sharpe.add_trace(go.Scatter(
+        x=portfolio_daily_return_sharpe['time'],
+        y=portfolio_daily_return_sharpe['cumulative_portfolio_return'],
+        mode='lines',
+        name='Lợi nhuận tích lũy',
+        hovertemplate='Ngày: %{x}<br>Lợi nhuận tích lũy: %{y:.2f}%<extra></extra>'
+    ))
+    fig_portfolio_sharpe.update_layout(
+        title="Lợi nhuận tích lũy của danh mục (SGD - Sharpe)",
+        xaxis_title="Thời gian",
+        yaxis_title="Lợi nhuận tích lũy (%)",
+        template="plotly_white"
+    )
+    # Thêm ký hiệu % vào nhãn của trục Y
+    fig_portfolio_sharpe.update_yaxes(ticksuffix="%")
+    st.plotly_chart(fig_portfolio_sharpe, use_container_width=True)
 
     # So sánh với VN-Index
     with st.expander("So sánh với VN-Index"):
@@ -559,7 +713,8 @@ with tab4:
                 st.stop()
 
         vnindex_data['market_return'] = vnindex_data['close'].pct_change()
-        vnindex_data['cumulative_daily_return'] = (1 + vnindex_data['market_return']).cumprod()
+        # Tính lợi nhuận tích lũy của VN-Index và chuyển sang %
+        vnindex_data['cumulative_daily_return'] = (1 + vnindex_data['market_return']).cumprod() * 100
 
         comparison_sharpe = pd.merge(
             portfolio_daily_return_sharpe,
@@ -567,39 +722,43 @@ with tab4:
             on='time',
             how='inner'
         )
+        # Đổi tên cột để thể hiện đơn vị %
         comparison_sharpe.rename(columns={
-            'cumulative_portfolio_return': 'Lợi nhuận danh mục (Sharpe)',
-            'cumulative_daily_return': 'Lợi nhuận VN-Index'
+            'cumulative_portfolio_return': 'Lợi nhuận danh mục (Sharpe) (%)',
+            'cumulative_daily_return': 'Lợi nhuận VN-Index (%)'
         }, inplace=True)
 
         st.subheader("Bảng so sánh lợi nhuận (10 dòng cuối)")
-        st.dataframe(comparison_sharpe[['time', 'Lợi nhuận danh mục (Sharpe)', 'Lợi nhuận VN-Index']].tail(10))
+        st.dataframe(comparison_sharpe[['time', 'Lợi nhuận danh mục (Sharpe) (%)', 'Lợi nhuận VN-Index (%)']].tail(10))
 
         fig_comp_sharpe = go.Figure()
         fig_comp_sharpe.add_trace(go.Scatter(
             x=comparison_sharpe['time'],
-            y=comparison_sharpe['Lợi nhuận danh mục (Sharpe)'],
+            y=comparison_sharpe['Lợi nhuận danh mục (Sharpe) (%)'],
             mode='lines',
             name='Lợi nhuận danh mục (Sharpe)',
             line=dict(color='orange', width=2),
-            hovertemplate='Ngày: %{x}<br>Lợi nhuận danh mục (Sharpe): %{y:.2%}<extra></extra>'
+            hovertemplate='Ngày: %{x}<br>Lợi nhuận danh mục (Sharpe): %{y:.2f}%<extra></extra>'
         ))
         fig_comp_sharpe.add_trace(go.Scatter(
             x=comparison_sharpe['time'],
-            y=comparison_sharpe['Lợi nhuận VN-Index'],
+            y=comparison_sharpe['Lợi nhuận VN-Index (%)'],
             mode='lines',
             name='Lợi nhuận VN-Index',
             line=dict(color='red', width=2),
-            hovertemplate='Ngày: %{x}<br>Lợi nhuận VN-Index: %{y:.2%}<extra></extra>'
+            hovertemplate='Ngày: %{x}<br>Lợi nhuận VN-Index: %{y:.2f}%<extra></extra>'
         ))
         fig_comp_sharpe.update_layout(
             title="So sánh lợi nhuận danh mục (Sharpe) vs VN-Index",
             xaxis_title="Thời gian",
-            yaxis_title="Lợi nhuận tích lũy",
+            yaxis_title="Lợi nhuận tích lũy (%)",
             template="plotly_white",
             hovermode="x unified"
         )
+        # Thêm ký hiệu % vào nhãn của trục Y
+        fig_comp_sharpe.update_yaxes(ticksuffix="%")
         st.plotly_chart(fig_comp_sharpe, use_container_width=True)
+
         comparison_sharpe.to_csv("portfolio_vs_vnindex_comparison_sharpe.csv", index=False)
         st.write("Dữ liệu so sánh đã được lưu vào 'portfolio_vs_vnindex_comparison_sharpe.csv'.")
 
@@ -861,13 +1020,29 @@ with tab7:
         for symbol in symbols:
             st.header(f"Báo cáo tài chính cho mã {symbol}")
 
-            # ----------------------- BALANCE SHEET -----------------------
+            # ----------------------- 1) BẢNG CÂN ĐỐI KẾ TOÁN -----------------------
             with st.expander("Bảng cân đối kế toán (Hàng năm)"):
                 balance_data = get_financial_data(symbol, "balance")
                 if not balance_data.empty and 'Năm' in balance_data.columns:
-                    st.write("**Bảng cân đối kế toán (Hàng năm):**")
-                    st.dataframe(balance_data)
-                    numeric_cols = [col for col in balance_data.select_dtypes(include=['float64', 'int64']).columns if col != 'Năm']
+                    # Loại bỏ dấu phẩy trong Năm, chuyển về int, sắp xếp tăng dần
+                    balance_data['Năm'] = (
+                        balance_data['Năm']
+                        .astype(str)
+                        .str.replace(',', '', regex=False)
+                        .astype(int)
+                    )
+                    balance_data = balance_data.sort_values('Năm')
+
+                    # Chuyển vị DataFrame
+                    df_balance_transposed = balance_data.set_index('Năm').T
+                    st.write("**Bảng cân đối kế toán (Hàng năm) - Dữ liệu đã chuyển vị:**")
+                    st.dataframe(df_balance_transposed)
+
+                    # ---------- Phần biểu đồ (tham chiếu dữ liệu gốc) ----------
+                    numeric_cols = [
+                        col for col in balance_data.select_dtypes(include=['float64', 'int64']).columns
+                        if col != 'Năm'
+                    ]
                     if numeric_cols:
                         selected_cols = st.multiselect(
                             f"Chọn các chỉ số để hiển thị biểu đồ (Bảng cân đối {symbol}):",
@@ -880,7 +1055,10 @@ with tab7:
                             options=available_years,
                             default=[]
                         )
-                        df_filtered = balance_data[balance_data['Năm'].isin(selected_years)] if selected_years else balance_data
+                        df_filtered = (
+                            balance_data[balance_data['Năm'].isin(selected_years)]
+                            if selected_years else balance_data
+                        )
 
                         if selected_cols:
                             for i in range(0, len(selected_cols), 5):
@@ -951,13 +1129,29 @@ with tab7:
                 else:
                     st.warning(f"Không có dữ liệu hoặc cột 'Năm' cho bảng cân đối kế toán của {symbol}")
 
-            # ----------------------- INCOME STATEMENT -----------------------
+            # ----------------------- 2) BÁO CÁO LÃI LỖ -----------------------
             with st.expander("Báo cáo lãi lỗ (Hàng năm)"):
                 income_data = get_financial_data(symbol, "income")
                 if not income_data.empty and 'Năm' in income_data.columns:
-                    st.write("**Báo cáo lãi lỗ (Hàng năm):**")
-                    st.dataframe(income_data)
-                    numeric_cols = [col for col in income_data.select_dtypes(include=['float64', 'int64']).columns if col != 'Năm']
+                    # Loại bỏ dấu phẩy trong Năm, chuyển về int, sắp xếp tăng dần
+                    income_data['Năm'] = (
+                        income_data['Năm']
+                        .astype(str)
+                        .str.replace(',', '', regex=False)
+                        .astype(int)
+                    )
+                    income_data = income_data.sort_values('Năm')
+
+                    # Chuyển vị DataFrame
+                    df_income_transposed = income_data.set_index('Năm').T
+                    st.write("**Báo cáo lãi lỗ (Hàng năm) - Dữ liệu đã chuyển vị:**")
+                    st.dataframe(df_income_transposed)
+
+                    # ---------- Phần biểu đồ (tham chiếu dữ liệu gốc) ----------
+                    numeric_cols = [
+                        col for col in income_data.select_dtypes(include=['float64', 'int64']).columns
+                        if col != 'Năm'
+                    ]
                     if numeric_cols:
                         selected_cols = st.multiselect(
                             f"Chọn các chỉ số để hiển thị biểu đồ (Báo cáo lãi lỗ {symbol}):",
@@ -970,7 +1164,10 @@ with tab7:
                             options=available_years,
                             default=[]
                         )
-                        df_filtered = income_data[income_data['Năm'].isin(selected_years)] if selected_years else income_data
+                        df_filtered = (
+                            income_data[income_data['Năm'].isin(selected_years)]
+                            if selected_years else income_data
+                        )
 
                         if selected_cols:
                             for i in range(0, len(selected_cols), 5):
@@ -1039,13 +1236,29 @@ with tab7:
                 else:
                     st.warning(f"Không có dữ liệu hoặc cột 'Năm' cho báo cáo lãi lỗ của {symbol}")
 
-            # ----------------------- CASH FLOW -----------------------
+            # ----------------------- 3) BÁO CÁO LƯU CHUYỂN TIỀN TỆ -----------------------
             with st.expander("Báo cáo lưu chuyển tiền tệ (Hàng năm)"):
                 cash_flow_data = get_financial_data(symbol, "cashflow")
                 if not cash_flow_data.empty and 'Năm' in cash_flow_data.columns:
-                    st.write("**Báo cáo lưu chuyển tiền tệ (Hàng năm):**")
-                    st.dataframe(cash_flow_data)
-                    numeric_cols = [col for col in cash_flow_data.select_dtypes(include=['float64', 'int64']).columns if col != 'Năm']
+                    # Loại bỏ dấu phẩy trong Năm, chuyển về int, sắp xếp tăng dần
+                    cash_flow_data['Năm'] = (
+                        cash_flow_data['Năm']
+                        .astype(str)
+                        .str.replace(',', '', regex=False)
+                        .astype(int)
+                    )
+                    cash_flow_data = cash_flow_data.sort_values('Năm')
+
+                    # Chuyển vị DataFrame
+                    df_cashflow_transposed = cash_flow_data.set_index('Năm').T
+                    st.write("**Báo cáo lưu chuyển tiền tệ (Hàng năm) - Dữ liệu đã chuyển vị:**")
+                    st.dataframe(df_cashflow_transposed)
+
+                    # ---------- Phần biểu đồ (tham chiếu dữ liệu gốc) ----------
+                    numeric_cols = [
+                        col for col in cash_flow_data.select_dtypes(include=['float64', 'int64']).columns
+                        if col != 'Năm'
+                    ]
                     if numeric_cols:
                         selected_cols = st.multiselect(
                             f"Chọn các chỉ số để hiển thị biểu đồ (Báo cáo lưu chuyển {symbol}):",
@@ -1058,7 +1271,10 @@ with tab7:
                             options=available_years,
                             default=[]
                         )
-                        df_filtered = cash_flow_data[cash_flow_data['Năm'].isin(selected_years)] if selected_years else cash_flow_data
+                        df_filtered = (
+                            cash_flow_data[cash_flow_data['Năm'].isin(selected_years)]
+                            if selected_years else cash_flow_data
+                        )
 
                         if selected_cols:
                             for i in range(0, len(selected_cols), 5):
@@ -1127,13 +1343,30 @@ with tab7:
                 else:
                     st.warning(f"Không có dữ liệu hoặc cột 'Năm' cho báo cáo lưu chuyển tiền tệ của {symbol}")
 
-            # ----------------------- FINANCIAL RATIOS -----------------------
+            # ----------------------- 4) CHỈ SỐ TÀI CHÍNH -----------------------
             with st.expander("Chỉ số tài chính (Hàng năm)"):
                 ratios_data = get_financial_data(symbol, "ratios")
+                # Ở phần này cột năm là 'Meta_Năm'
                 if not ratios_data.empty and 'Meta_Năm' in ratios_data.columns:
-                    st.write("**Chỉ số tài chính (Hàng năm):**")
-                    st.dataframe(ratios_data)
-                    numeric_cols = [col for col in ratios_data.select_dtypes(include=['float64', 'int64']).columns if col != 'Meta_Năm']
+                    # Loại bỏ dấu phẩy trong Meta_Năm, chuyển về int, sắp xếp tăng dần
+                    ratios_data['Meta_Năm'] = (
+                        ratios_data['Meta_Năm']
+                        .astype(str)
+                        .str.replace(',', '', regex=False)
+                        .astype(int)
+                    )
+                    ratios_data = ratios_data.sort_values('Meta_Năm')
+
+                    # Chuyển vị DataFrame
+                    df_ratios_transposed = ratios_data.set_index('Meta_Năm').T
+                    st.write("**Chỉ số tài chính (Hàng năm) - Dữ liệu đã chuyển vị:**")
+                    st.dataframe(df_ratios_transposed)
+
+                    # ---------- Phần biểu đồ (tham chiếu dữ liệu gốc) ----------
+                    numeric_cols = [
+                        col for col in ratios_data.select_dtypes(include=['float64', 'int64']).columns
+                        if col != 'Meta_Năm'
+                    ]
                     if numeric_cols:
                         selected_cols = st.multiselect(
                             f"Chọn các chỉ số để hiển thị biểu đồ (Chỉ số tài chính {symbol}):",
@@ -1146,7 +1379,10 @@ with tab7:
                             options=available_years,
                             default=[]
                         )
-                        df_filtered = ratios_data[ratios_data['Meta_Năm'].isin(selected_years)] if selected_years else ratios_data
+                        df_filtered = (
+                            ratios_data[ratios_data['Meta_Năm'].isin(selected_years)]
+                            if selected_years else ratios_data
+                        )
 
                         if selected_cols:
                             for i in range(0, len(selected_cols), 5):
@@ -1214,6 +1450,8 @@ with tab7:
                                                 st.info("Không đủ dữ liệu để tính CAGR.")
                 else:
                     st.warning(f"Không có dữ liệu hoặc cột 'Meta_Năm' cho chỉ số tài chính của {symbol}")
+
+
 # Phân tích kỹ thuật
 with tab8:
     st.header("Phân tích kỹ thuật")
